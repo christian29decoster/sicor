@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: sicor-postgres
+    environment:
+      POSTGRES_DB: sicor
+      POSTGRES_USER: sicor
+      POSTGRES_PASSWORD: sicor123
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sicor -d sicor"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - sicor-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: sicor-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - sicor-network
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: sicor-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@sicor.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "8080:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - sicor-network
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  pgadmin_data:
+    driver: local
+
+networks:
+  sicor-network:
+    driver: bridge
